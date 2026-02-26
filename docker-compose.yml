@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  1c-server:
+    image: ${IMAGE:-1c-server:8.3.27}
+    container_name: 1c-server-${SERVER_PORT:-1540}
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-1540}:1540"  # -port (администрирование)
+      - "${REGPORT_PORT:-1541}:1541"  # -regport (менеджер кластера rmngr)
+      - "${WORK_PORTS_START:-1560}-${WORK_PORTS_END:-1591}:1560-1591"  # -range (рабочие процессы rphost)
+    volumes:
+      - ./1c-data:/opt/1C  # Подключаем volume к каталогу данных
+      - ./1c-lic:/var/1C  # Подключаем volume для лицензий
+    command: >
+      ./ragent -agent -port 1540 -regport 1541 -range 1560:1591 -d /opt/1C
+    healthcheck:
+      test: ["CMD", "pgrep", "ragent"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - 1c-network
+
+  ras:
+    image: ${IMAGE:-1c-server:8.3.27}
+    container_name: 1c-ras-${SERVER_PORT:-1540}
+    restart: unless-stopped
+    depends_on:
+      - 1c-server
+    ports:
+      - "${RAS_PORT:-1545}:1545"
+      - "${RAS_MONITOR_PORT:-1555}:1555"
+    command:
+      - ./ras
+      - cluster
+      - --monitor-address=any 
+      - --monitor-port=1555 
+      - --monitor-base=/metrics
+      - --monitor-address=any
+      - --port=1545
+      - 1c-server-${SERVER_PORT:-1540}:1540
+    healthcheck:
+      test: ["CMD", "pgrep", "ras"]
+      interval: 90s
+      timeout: 10s
+      retries: 3
+    networks:
+      - 1c-network
+
+networks:
+  1c-network:
+    driver: bridge
+
+volumes:
+  1c-data:  # Объём будет создан автоматически
+  1c-lic:   # Объём для хранения л:ицензий 1С
+
