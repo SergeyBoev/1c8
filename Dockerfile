@@ -4,13 +4,15 @@ LABEL maintainer="SergeyBoev@gmail.com"
 LABEL description="1C:Enterprise 8.3.27 Server"
 
 # Установка зависимостей
-RUN apt-get update && \
+RUN echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections && \
+    apt-get update && \
     apt-get install -y \
         unzip \
         libfontconfig1 \
         libfreetype6 \
         tzdata \
         locales \
+        ttf-mscorefonts-installer \
         sudo && \
     rm -rf /var/lib/apt/lists/*
 
@@ -48,7 +50,14 @@ RUN cd /tmp/debs && \
 # Очистка
 RUN apt-get clean
 
+
+WORKDIR /opt/1C
+
+
 USER usr1cv8
 
 WORKDIR /opt/1cv8/x86_64/8.3.27.1786
+
+#CMD ["./ragent"]
+
 
